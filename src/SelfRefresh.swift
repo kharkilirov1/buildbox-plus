@@ -88,9 +88,23 @@ final class SelfRefreshManager: ObservableObject {
     func autoRefreshIfNeeded() {
         evaluate()
         scheduleBackgroundRefresh()
-        guard needsRefresh, autoRefreshEnabled,
-              AppleIDAuthService.shared.isLoggedIn, !isRefreshing else { return }
-        startRefresh { _ in }
+        guard needsRefresh, autoRefreshEnabled, !isRefreshing else { return }
+        let auth = AppleIDAuthService.shared
+        if auth.isLoggedIn {
+            startRefresh { _ in }
+        } else if auth.hasSavedCredentials {
+            status = "Signing in to refresh the signature…"
+            auth.loginWithSavedCredentials { [weak self] success in
+                guard let self else { return }
+                if success {
+                    self.startRefresh { _ in }
+                } else {
+                    self.status = "Signature expires soon — sign in with your Apple ID to refresh"
+                }
+            }
+        } else {
+            status = "Signature expires soon — sign in with your Apple ID to refresh"
+        }
     }
 
     func startRefresh(completion: @escaping (Result<Void, Error>) -> Void) {
@@ -195,3 +209,4 @@ final class SelfRefreshManager: ObservableObject {
         center.add(request, withCompletionHandler: nil)
     }
 }
+

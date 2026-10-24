@@ -14,7 +14,6 @@ struct AppleIDSection: View {
     @State private var emailField = ""
     @State private var passwordField = ""
     @State private var remember = true
-    @State private var codeField = ""
     @State private var showTwoFactor = false
 
     var body: some View {
@@ -121,68 +120,7 @@ struct AppleIDSection: View {
         .onChange(of: auth.savedEmail) { newValue in
             if emailField.isEmpty { emailField = newValue }
         }
-        .sheet(item: $auth.twoFactorPrompt) { prompt in
-            TwoFactorSheet(prompt: prompt,
-                           code: $codeField,
-                           onSubmit: { code in
-                               auth.submitTwoFactor(code: code)
-                               codeField = ""
-                           },
-                           onSendToDevices: { auth.requestCodeOnDevices() },
-                           onSendSMS: { id in auth.requestCodeBySMS(id: id) },
-                           onResend: { auth.resendCode() },
-                           onCancel: { auth.cancelTwoFactor() })
-            .interactiveDismissDisabled()
-        }
-    }
-}
 
-private struct TwoFactorSheet: View {
-    let prompt: TwoFactorPrompt
-    @Binding var code: String
-    var onSubmit: (String) -> Void
-    var onSendToDevices: () -> Void
-    var onSendSMS: (UInt32) -> Void
-    var onResend: () -> Void
-    var onCancel: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text(prompt.message)
-                }
-                Section(header: Text("Verification code")) {
-                    TextField("6-digit code", text: $code)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                }
-                Section {
-                    Button("Submit code") {
-                        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        onSubmit(trimmed)
-                    }
-                    .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                    if prompt.unknown || prompt.sms {
-                        Button("Send code to my devices") { onSendToDevices() }
-                    }
-                    ForEach(prompt.numbers) { number in
-                        if number.id != prompt.selectedNumberId {
-                            Button("Send SMS to \(number.display)") { onSendSMS(number.id) }
-                        }
-                    }
-                    if !prompt.unknown {
-                        Button("Resend code") { onResend() }
-                    }
-                }
-                Section {
-                    Button("Cancel", role: .cancel) { onCancel() }
-                }
-            }
-            .navigationTitle("Two-Factor Authentication")
-        }
     }
 }
 

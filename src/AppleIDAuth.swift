@@ -104,10 +104,11 @@ final class AppleIDAuthService: NSObject, ObservableObject {
 
     // MARK: Login
 
-    func login(email rawEmail: String, password: String, remember: Bool) {
+    func login(email rawEmail: String, password: String, remember: Bool, completion: ((Bool) -> Void)? = nil) {
         let email = rawEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !email.isEmpty, !password.isEmpty else {
             status = "Enter Apple ID and password"
+            completion?(false)
             return
         }
         isBusy = true
@@ -137,17 +138,18 @@ final class AppleIDAuthService: NSObject, ObservableObject {
                 }
             }
             DispatchQueue.main.async {
-                self.finishLogin(resultJSON: resultJSON, email: email, password: password, remember: remember)
+                self.finishLogin(resultJSON: resultJSON, email: email, password: password, remember: remember, completion: completion)
             }
         }
     }
 
-    private func finishLogin(resultJSON: String?, email: String, password: String, remember: Bool) {
+    private func finishLogin(resultJSON: String?, email: String, password: String, remember: Bool, completion: ((Bool) -> Void)? = nil) {
         isBusy = false
         twoFactorPrompt = nil
         guard let resultJSON, let data = resultJSON.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             status = "Unexpected response from signing engine"
+            completion?(false)
             return
         }
         if let ok = object["ok"] as? Bool, ok, let handleNumber = object["handle"] as? NSNumber {
@@ -164,9 +166,11 @@ final class AppleIDAuthService: NSObject, ObservableObject {
                 Keychain.delete(service: Self.keychainService, account: email)
             }
             status = "Signed in as \(email)"
+            completion?(true)
         } else {
             let message = object["error"] as? String ?? "Apple ID sign-in failed"
             status = message
+            completion?(false)
         }
     }
 
@@ -187,6 +191,22 @@ final class AppleIDAuthService: NSObject, ObservableObject {
         return Keychain.load(service: Self.keychainService, account: savedEmail)
     }
 
+
+    /// Whether an email + password for a previous sign-in are stored in the Keychain.
+    var hasSavedCredentials: Bool {
+        !savedEmail.isEmpty && Keychain.load(service: Self.keychainService, account: savedEmail) != nil
+    }
+
+    /// Sign in again without user input (used by the auto-refresh path). If Apple
+    /// asks for a 2FA code the prompt sheet appears; the completion fires after
+    /// the attempt finishes.
+    func loginWithSavedCredentials(completion: @escaping (Bool) -> Void) {
+        guard hasSavedCredentials, let password = loadSavedPassword() else {
+            completion(false)
+            return
+        }
+        login(email: savedEmail, password: password, remember: true, completion: completion)
+    }
     // MARK: Two-factor authentication
 
     func handleTwoFactor(paramsJSON: String, outBuf: UnsafeMutablePointer<CChar>, outCap: Int) -> Int {
@@ -473,6 +493,7 @@ enum Keychain {
         SecItemDelete(query as CFDictionary)
     }
 }
+
 
 
 

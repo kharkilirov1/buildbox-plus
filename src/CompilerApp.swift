@@ -24,6 +24,7 @@ struct CompilerApp: App {
 }
 
 struct ContentView: View {
+    @ObservedObject private var appleID = AppleIDAuthService.shared
     @State private var selectedTab = 0
     @State private var pendingSignIpa: URL? = nil
     @State private var showSplash = true
@@ -60,6 +61,9 @@ struct ContentView: View {
         // inspected and ready to sign.
         .onOpenURL { url in
             handleIncomingIPA(url)
+        }
+        .sheet(item: $appleID.twoFactorPrompt) { prompt in
+            TwoFactorSheet(prompt: prompt)
         }
         .onChange(of: showSplash) { _, shown in
             guard !shown else { return }
@@ -144,3 +148,4 @@ struct SplashView: View {
         .preferredColorScheme(.dark)
     }
 }
+
