@@ -1,0 +1,11 @@
+build/
+out/
+Payload/
+DerivedData/
+*.ipa
+*.log
+.DS_Store
+xcuserdata/
+bridge/target/
+pc-tool/target/
+artifacts/

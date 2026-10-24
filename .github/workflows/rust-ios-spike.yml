@@ -1,0 +1,36 @@
+name: rust-ios-spike
+
+on:
+  push:
+    paths:
+      - "bridge/**"
+      - ".github/workflows/rust-ios-spike.yml"
+  workflow_dispatch:
+
+jobs:
+  build-staticlib:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust with iOS target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Show toolchain
+        run: rustc --version && cargo --version
+
+      - name: Build bridge staticlib for iOS
+        run: |
+          set -o pipefail
+          cd bridge
+          cargo build --release --target aarch64-apple-ios 2>&1 | tee cargo.log | tail -n 200
+
+      - name: Artifact info
+        run: |
+          set -euo pipefail
+          ls -la bridge/target/aarch64-apple-ios/release/*.a
+          file bridge/target/aarch64-apple-ios/release/libbuildbox_sideload.a || true
+          nm -g bridge/target/aarch64-apple-ios/release/libbuildbox_sideload.a 2>/dev/null | grep bbs_ | head -20 || true

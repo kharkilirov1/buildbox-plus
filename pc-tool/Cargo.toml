@@ -1,0 +1,25 @@
+[package]
+name = "buildbox-pc-tool"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "PC helper: sign + install an IPA with an Apple ID over USB (isideload), reusing iLoader's saved credentials"
+
+[[bin]]
+name = "bb-install"
+path = "src/main.rs"
+
+[dependencies]
+isideload = { version = "0.5", default-features = false, features = ["tokio-mt", "keyring-storage", "install"] }
+idevice = { version = "0.1", default-features = false, features = ["ring", "usbmuxd", "afc", "installation_proxy", "remote_pairing", "rsd"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+rootcause = "0.12"
+rustls = { version = "0.23", default-features = false, features = ["ring", "tls12", "std"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+opt-level = 2
+lto = true
+codegen-units = 1
+

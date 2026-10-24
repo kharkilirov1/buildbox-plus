@@ -1,0 +1,23 @@
+[package]
+name = "buildbox-sideload"
+version = "0.2.0"
+edition = "2024"
+publish = false
+description = "C ABI bridge over the isideload engine (Apple ID login, dev certificate, provisioning profile, IPA signing) for BuildBox on iOS"
+
+[lib]
+name = "buildbox_sideload"
+crate-type = ["staticlib"]
+
+[dependencies]
+isideload = { version = "0.5", default-features = false, features = ["tokio-mt", "fs-storage", "install"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+serde_json = "1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "tls12", "std"] }
+rootcause = "0.12"
+
+[profile.release]
+opt-level = 2
+lto = true
+codegen-units = 1
+strip = true

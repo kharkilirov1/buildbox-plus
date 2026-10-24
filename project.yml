@@ -1,0 +1,62 @@
+name: BuildBox
+
+options:
+  bundleIdPrefix: com.mikevillarroel
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CLANG_ENABLE_MODULES: "NO"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    ONLY_ACTIVE_ARCH: "NO"
+    ARCHS: arm64
+    SUPPORTS_MACCATALYST: "NO"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  BuildBox:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: src
+      - path: res
+        buildPhase: resources
+      - path: frameworks/OpenSSL.framework
+        embed: true
+    settings:
+      base:
+        PRODUCT_NAME: BuildBox
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikevillarroel.buildbox
+        INFOPLIST_FILE: Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: src/Bridging.h
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/src/zsign"
+          - "$(SRCROOT)/src/zsign/common"
+          - "$(SRCROOT)/src/zsign/include"
+          - "$(SRCROOT)/frameworks/OpenSSL.framework/Headers"
+          - "$(SRCROOT)/bridge/include"
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(SRCROOT)/frameworks"
+        LIBRARY_SEARCH_PATHS:
+          - "$(SRCROOT)/bridge/target/aarch64-apple-ios/release"
+        OTHER_LDFLAGS:
+          - "-framework"
+          - "OpenSSL"
+          - "-lbuildbox_sideload"
+        OTHER_CFLAGS:
+          - "-fno-modules"
+        OTHER_CPLUSPLUSFLAGS:
+          - "-fno-modules"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/Frameworks"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""

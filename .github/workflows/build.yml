@@ -1,0 +1,70 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust with iOS target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "bridge -> target"
+
+      - name: Build sideload engine (Rust staticlib)
+        run: |
+          set -o pipefail
+          cd bridge
+          cargo build --release --target aarch64-apple-ios 2>&1 | tee cargo.log | tail -n 80
+          ls -la target/aarch64-apple-ios/release/libbuildbox_sideload.a
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build unsigned app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project BuildBox.xcodeproj \
+            -target BuildBox \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            OBJROOT="$PWD/build/obj" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | tail -n 250
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP="build/Release-iphoneos/BuildBox.app"
+          if [ ! -d "$APP" ]; then echo "BuildBox.app missing"; exit 1; fi
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          cd out
+          zip -qry BuildBox-fork.ipa Payload
+          shasum -a 256 BuildBox-fork.ipa
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BuildBox-fork-ipa
+          path: out/BuildBox-fork.ipa
+          if-no-files-found: error
+          retention-days: 14
