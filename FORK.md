@@ -33,7 +33,7 @@ This fork adds:
 - [x] C ABI bridge: `bbs_init` / `bbs_login` (2FA callback) / teams / cert + App ID +
       profile / `bbs_export_identity` + `bbs_sign_ipa` (verified linked into the app binary)
 - [x] Swift module `AppleIDAuth` (Keychain storage, Apple ID section in the Sign tab)
-- [x] `SelfRefresh` manager (profile expiry check, re-sign own bundle, self-install,
+- [x] `SelfRefresh` manager (profile expiry check, silent re-login with the saved Keychain credential, re-sign own bundle, self-install,
       `BGAppRefreshTask`, expiry notification)
 - [ ] End-to-end on device (blocked: iPhone not connected to this PC): sign fork IPA via iLoader, install, log in with Apple ID,
       sign a test app with the account-issued certificate, verify refresh
@@ -83,4 +83,12 @@ target/release/bb-install.exe --ipa ..\ci-out4\BuildBox-fork.ipa --apple-id <app
 `--check-device` works without credentials (usbmuxd reachable, waits for the iPhone).
 Verified 2026-10-24: `--help` and `--check-device` run; usbmuxd reports "no devices
 found" while the iPhone is disconnected, Apple Mobile Device Service is running.
+
+
+### 2026-10-24 — auto-refresh sign-in
+
+When the signature is within two days of expiry and no live session exists, the app now
+repeats the Apple ID sign-in with the Keychain-saved password; if Apple asks for a
+2FA code, the prompt sheet is presented from ContentView (works on any tab) and the
+refresh continues after the code is entered.
 
